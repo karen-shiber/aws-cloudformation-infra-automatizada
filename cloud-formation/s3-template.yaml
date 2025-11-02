@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+DIO – Bucket S3 para artefatos/logs com opção de versionamento e política HTTPS-only.
+
+
+Parameters:
+BucketName:
+Type: String
+Description: Nome global e único do bucket
+MinLength: 3
+MaxLength: 63
+EnableVersioning:
+Type: String
+Default: 'true'
+AllowedValues: ['true','false']
+
+
+Mappings:
+VersioningMap:
+true:
+Status: Enabled
+false:
+Status: Suspended
+
+
+Resources:
+AppBucket:
+Type: AWS::S3::Bucket
+Properties:
+BucketName: !Ref BucketName
+VersioningConfiguration:
+Status: !FindInMap [VersioningMap, !Ref EnableVersioning, Status]
+PublicAccessBlockConfiguration:
+BlockPublicAcls: true
+BlockPublicPolicy: true
+IgnorePublicAcls: true
+RestrictPublicBuckets: true
+
+
+HttpsOnlyBucketPolicy:
+Type: AWS::S3::BucketPolicy
+Properties:
+Bucket: !Ref AppBucket
+PolicyDocument:
+Version: '2012-10-17'
+Statement:
+- Sid: AllowSSLRequestsOnly
+Effect: Deny
+Principal: '*'
+Action: 's3:*'
+Resource:
+- !Sub '${AppBucket.Arn}'
+- !Sub '${AppBucket.Arn}/*'
+Condition:
+Bool:
+aws:SecureTransport: false
+
+
+Outputs:
+BucketName:
+Value: !Ref AppBucket
+BucketArn:
+Value: !GetAtt AppBucket.Arn
