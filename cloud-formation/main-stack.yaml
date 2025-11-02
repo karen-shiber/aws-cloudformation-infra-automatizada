@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+DIO – Template principal para infraestrutura automatizada com VPC, EC2 e S3.
+
+
+Resources:
+VPCStack:
+Type: AWS::CloudFormation::Stack
+Properties:
+TemplateURL: vpc-template.yaml
+
+
+S3Stack:
+Type: AWS::CloudFormation::Stack
+Properties:
+TemplateURL: s3-template.yaml
+
+
+EC2Stack:
+Type: AWS::CloudFormation::Stack
+Properties:
+TemplateURL: ec2-template.yaml
