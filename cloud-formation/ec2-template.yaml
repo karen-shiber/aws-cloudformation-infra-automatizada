@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+PublicSubnetId:
+Type: AWS::EC2::Subnet::Id
+KeyName:
+Type: AWS::EC2::KeyPair::KeyName
+Description: Nome do par de chaves EC2 para acesso SSH
+InstanceType:
+Type: String
+Default: t3.micro
+AllowedValues: [t2.micro, t3.micro, t3.small, t3.medium]
+IngressCidrForSSH:
+Type: String
+Default: 0.0.0.0/0
+Description: CIDR permitido para SSH (ajuste em produção)
+
+
+Mappings:
+AmazonLinux2023:
+x86_64:
+AMI:
+# Usa parâmetro do SSM para a última AMI AL2023 Kernel 6.1
+# Em tempo de criação, resolvido como ImageId
+# Mantido como comentário para referência
+# '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}': ''
+
+
+Resources:
+InstanceSecurityGroup:
+Type: AWS::EC2::SecurityGroup
+Properties:
+GroupDescription: Acessos SSH e HTTP para a instância EC2
+VpcId: !Ref VpcId
+SecurityGroupIngress:
+- IpProtocol: tcp
+FromPort: 22
+ToPort: 22
+CidrIp: !Ref IngressCidrForSSH
+- IpProtocol: tcp
+FromPort: 80
+ToPort: 80
+CidrIp: 0.0.0.0/0
+Tags:
+- Key: Name
+Value: dio-ec2-sg
+
+
+EC2Instance:
+Type: AWS::EC2::Instance
+Properties:
+SubnetId: !Ref PublicSubnetId
+InstanceType: !Ref InstanceType
+KeyName: !Ref KeyName
+SecurityGroupIds:
+- !Ref InstanceSecurityGroup
+ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
+Tags:
+- Key: Name
+Value: dio-ec2
+UserData:
+Fn::Base64: !Sub |
+#!/bin/bash -xe
+dnf update -y
+dnf install -y httpd
+systemctl enable httpd
+echo "<h1>DIO – EC2 UP</h1>" > /var/www/html/index.html
+systemctl start httpd
+
+
+Outputs:
+InstanceId:
+Description: ID da instância
+Value: !Ref EC2Instance
+PublicIp:
+Description: IP público
+Value: !GetAtt EC2Instance.PublicIp
+PublicDnsName:
+Description: DNS público
+Value: !GetAtt EC2Instance.PublicDnsName
+SecurityGroupId:
+Description: SG da instância
+Value: !Ref InstanceSecurityGroup
